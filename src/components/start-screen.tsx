@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { WalletButton } from "@/components/wallet-button";
 import { ROUND_COST_SOL } from "@/lib/constants";
-import { sendRoundPayment } from "@/lib/payment";
+import { getPaymentRecipient, sendRoundPayment } from "@/lib/payment";
 import {
   hasFreeRoundAvailable,
   markFreeRoundUsed,
@@ -33,6 +33,27 @@ import { useToast } from "@/hooks/use-toast";
 
 interface StartScreenProps {
   onStartQuiz: (roundType: RoundType) => void;
+}
+
+function PaymentDetails() {
+  const recipient = getPaymentRecipient();
+
+  return (
+    <div className="rounded-md border border-border/50 bg-secondary/30 p-3 text-xs text-muted-foreground">
+      <p>
+        You send{" "}
+        <span className="font-semibold text-primary">{ROUND_COST_SOL} SOL</span>{" "}
+        to the prize pool for one extra round.
+      </p>
+      <p className="mt-1.5 break-all font-mono text-[10px] leading-relaxed text-foreground/80">
+        {recipient}
+      </p>
+      <p className="mt-2 text-[11px]">
+        Phantom may warn on new sites — this is a simple SOL transfer, not a
+        token approval. Safe to confirm if you trust this app.
+      </p>
+    </div>
+  );
 }
 
 export function StartScreen({ onStartQuiz }: StartScreenProps) {
@@ -196,6 +217,7 @@ export function StartScreen({ onStartQuiz }: StartScreenProps) {
                 <p className="text-center text-sm text-muted-foreground">
                   Free round used this week. Resets {resetDate}.
                 </p>
+                <PaymentDetails />
                 <Button
                   variant="bull"
                   size="lg"
@@ -217,7 +239,9 @@ export function StartScreen({ onStartQuiz }: StartScreenProps) {
                 </Button>
               </div>
             ) : (
-              <Button
+              <div className="space-y-3">
+                <PaymentDetails />
+                <Button
                 variant="outline"
                 size="lg"
                 className="w-full"
@@ -236,6 +260,7 @@ export function StartScreen({ onStartQuiz }: StartScreenProps) {
                   </>
                 )}
               </Button>
+              </div>
             )}
 
             <Button

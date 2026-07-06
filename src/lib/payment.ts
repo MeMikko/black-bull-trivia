@@ -3,6 +3,7 @@ import {
   PublicKey,
   SystemProgram,
   Transaction,
+  TransactionInstruction,
   LAMPORTS_PER_SOL,
   type SendOptions,
 } from "@solana/web3.js";
@@ -10,11 +11,10 @@ import { PRIZE_WALLET, ROUND_COST_LAMPORTS } from "./constants";
 
 const CONFIRM_TIMEOUT_MS = 90_000;
 const POLL_INTERVAL_MS = 1_500;
-
-function isMobileBrowser(): boolean {
-  if (typeof navigator === "undefined") return false;
-  return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
-}
+const MEMO_PROGRAM_ID = new PublicKey(
+  "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"
+);
+const PAYMENT_MEMO = "Black Bull Trivia: paid round";
 
 function normalizeWalletError(err: unknown): Error {
   const message = err instanceof Error ? err.message : String(err);
@@ -42,13 +42,38 @@ async function buildTransaction(
     feePayer: publicKey,
     blockhash,
     lastValidBlockHeight,
-  }).add(
-    SystemProgram.transfer({
-      fromPubkey: publicKey,
-      toPubkey: prizeWallet,
-      lamports: ROUND_COST_LAMPORTS,
-    })
-  );
+  })
+    .add(
+      SystemProgram.transfer({
+        fromPubkey: publicKey,
+        toPubkey: prizeWallet,
+        lamports: ROUND_COST_LAMPORTS,
+      })
+    )
+    .add(
+      new TransactionInstruction({
+        keys: [{ pubkey: publicKey, isSigner: true, isWritable: false }],
+        programId: MEMO_PROGRAM_ID,
+        data: Buffer.from(PAYMENT_MEMO, "utf8"),
+      })
+    );
+}
+
+async function assertTransactionWillSucceed(
+  connection: Connection,
+  transaction: Transaction
+): Promise<void> {
+  const simulation = await connection.simulateTransaction(transaction);
+
+  if (simulation.value.err) {
+    const detail = JSON.stringify(simulation.value.err);
+    if (detail.includes("InsufficientFundsForRent") || detail.includes("0x1")) {
+      throw new Error("Not enough SOL in your wallet for this payment.");
+    }
+    throw new Error(
+      "Transaction could not be verified. Refresh the page and try again."
+    );
+  }
 }
 
 async function pollForConfirmation(
@@ -88,9 +113,8 @@ async function pollForConfirmation(
 }
 
 /**
- * Use wallet adapter sendTransaction only — Phantom routes this to
- * signAndSendTransaction, which is reliable on mobile. Do not use
- * signTransaction + sendRawTransaction; that causes "Missing signature".
+ * Wallet adapter sendTransaction — Phantom uses signAndSendTransaction.
+ * Pre-simulate so Phantom is less likely to show a malicious-tx warning.
  */
 export async function sendRoundPayment(
   publicKey: PublicKey,
@@ -108,14 +132,21 @@ export async function sendRoundPayment(
   }
 
   const prizeWallet = new PublicKey(PRIZE_WALLET);
-  const mobile = isMobileBrowser();
   const transaction = await buildTransaction(connection, publicKey, prizeWallet);
+
+  const balance = await connection.getBalance(publicKey);
+  const required = ROUND_COST_LAMPORTS + 10_000;
+  if (balance < required) {
+    throw new Error("Not enough SOL in your wallet for this payment.");
+  }
+
+  await assertTransactionWillSucceed(connection, transaction);
 
   let signature: string;
   try {
     signature = await sendTransaction(transaction, connection, {
-      skipPreflight: mobile,
-      maxRetries: 5,
+      skipPreflight: false,
+      maxRetries: 3,
       preflightCommitment: "confirmed",
     });
   } catch (err) {
@@ -135,4 +166,8 @@ export async function sendRoundPayment(
 
 export function formatSolAmount(lamports: number): string {
   return (lamports / LAMPORTS_PER_SOL).toFixed(2);
+}
+
+export function getPaymentRecipient(): string {
+  return PRIZE_WALLET;
 }
