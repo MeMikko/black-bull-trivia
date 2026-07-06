@@ -1,27 +1,31 @@
-import { kv } from "@vercel/kv";
 import { NextResponse } from "next/server";
 import {
   getTopEntries,
   mergeEntry,
   type LeaderboardEntry,
 } from "@/lib/leaderboard-logic";
+import { getRedis, isRedisConfigured } from "@/lib/redis";
 import { getCurrentWeekId } from "@/lib/weekly";
 
 const KEY_PREFIX = "leaderboard:";
 
-function kvConfigured(): boolean {
-  return Boolean(
-    process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN
-  );
+async function loadWeek(weekId: string): Promise<LeaderboardEntry[]> {
+  const redis = await getRedis();
+  const raw = await redis.get(`${KEY_PREFIX}${weekId}`);
+  if (!raw) return [];
+  return JSON.parse(raw) as LeaderboardEntry[];
 }
 
-async function loadWeek(weekId: string): Promise<LeaderboardEntry[]> {
-  const entries = await kv.get<LeaderboardEntry[]>(`${KEY_PREFIX}${weekId}`);
-  return entries ?? [];
+async function saveWeek(
+  weekId: string,
+  entries: LeaderboardEntry[]
+): Promise<void> {
+  const redis = await getRedis();
+  await redis.set(`${KEY_PREFIX}${weekId}`, JSON.stringify(entries));
 }
 
 export async function GET(request: Request) {
-  if (!kvConfigured()) {
+  if (!isRedisConfigured()) {
     return NextResponse.json(
       { error: "Leaderboard storage not configured" },
       { status: 503 }
@@ -47,7 +51,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  if (!kvConfigured()) {
+  if (!isRedisConfigured()) {
     return NextResponse.json(
       { error: "Leaderboard storage not configured" },
       { status: 503 }
@@ -77,10 +81,9 @@ export async function POST(request: Request) {
       elapsedMs: body.elapsedMs,
     };
 
-    const key = `${KEY_PREFIX}${weekId}`;
     const entries = await loadWeek(weekId);
     const merged = mergeEntry(entries, newEntry);
-    await kv.set(key, merged);
+    await saveWeek(weekId, merged);
 
     return NextResponse.json({ ok: true });
   } catch {

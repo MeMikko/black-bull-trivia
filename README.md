@@ -27,7 +27,7 @@ A minimal viable trivia quiz app for the **$ANSEM** community. Built with Next.j
 | Styling | Tailwind CSS + shadcn/ui |
 | Wallet | @solana/wallet-adapter |
 | State | React state + TanStack React Query |
-| Storage | localStorage (weekly plays) + Vercel KV (leaderboard) |
+| Storage | localStorage (weekly plays) + Redis (leaderboard) |
 | Sharing | html2canvas |
 
 ## Quick Start
@@ -142,16 +142,22 @@ Replace or extend `src/data/questions.json`. Each question needs:
 ### Leaderboard
 
 - Top 10 scores for the current week (shared across all devices)
-- Stored in **Vercel KV / Upstash Redis** via `/api/leaderboard`
+- Stored in **Redis** via `/api/leaderboard`
 - Ties broken by fastest completion time
 - Best score per wallet per week is kept (faster time wins on equal score)
-- Falls back to browser `localStorage` if KV is not configured (device-only)
+- Falls back to browser `localStorage` if Redis is not configured (device-only)
 
 **Enable shared leaderboard on Vercel:**
 
-1. Vercel Dashboard → your project → **Storage** → Create **Redis** (Upstash)
-2. Connect it to the project — this sets `KV_REST_API_URL` and `KV_REST_API_TOKEN`
+1. Vercel Dashboard → your project → **Storage** → Create **Redis**
+2. Connect it to the project — this sets `REDIS_URL` automatically
 3. Redeploy
+
+**Local development with Redis:**
+
+```bash
+vercel env pull .env.development.local
+```
 
 ## Project Structure
 
@@ -207,7 +213,7 @@ Any platform supporting Next.js 14 works. Ensure environment variables are set.
 - **Weekly free plays** — tracked in localStorage per browser (not server-enforced)
 - **No anti-cheat** — users can clear localStorage for extra free rounds
 - **Mainnet payments** — real SOL transactions; use small amounts when testing
-- **Leaderboard requires Vercel KV** — without Redis integration, scores are device-only
+- **Leaderboard requires Redis** — without `REDIS_URL`, scores are device-only
 
 ## Development Tips
 
