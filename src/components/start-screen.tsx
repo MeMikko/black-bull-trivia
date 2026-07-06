@@ -16,12 +16,8 @@ import { Separator } from "@/components/ui/separator";
 import { WalletButton } from "@/components/wallet-button";
 import { ROUND_COST_SOL } from "@/lib/constants";
 import { getPaymentRecipient, sendRoundPayment } from "@/lib/payment";
-import {
-  hasFreeRoundAvailable,
-  markFreeRoundUsed,
-  getNextMondayReset,
-  getCurrentWeekId,
-} from "@/lib/weekly";
+import { checkFreeRoundAvailable, claimFreeRound } from "@/lib/free-round";
+import { getNextMondayReset, getCurrentWeekId } from "@/lib/weekly";
 import {
   addPaidRoundCredit,
   consumePaidRoundCredit,
@@ -63,24 +59,38 @@ export function StartScreen({ onStartQuiz }: StartScreenProps) {
   const { connection } = useConnection();
   const { toast } = useToast();
   const [freeAvailable, setFreeAvailable] = useState(false);
+  const [freeRoundSource, setFreeRoundSource] = useState<"server" | "local">(
+    "local"
+  );
   const [paidCredits, setPaidCredits] = useState(0);
   const [isPaying, setIsPaying] = useState(false);
+  const [isClaimingFree, setIsClaimingFree] = useState(false);
+  const [availabilityLoading, setAvailabilityLoading] = useState(false);
   const [resetDate, setResetDate] = useState("");
 
   const walletAddress = publicKey?.toBase58() ?? "";
 
-  const refreshAvailability = useCallback(() => {
-    if (walletAddress) {
-      setFreeAvailable(hasFreeRoundAvailable(walletAddress));
-      setPaidCredits(getUnusedPaidCreditCount(walletAddress));
-    } else {
+  const refreshAvailability = useCallback(async () => {
+    if (!walletAddress) {
       setFreeAvailable(false);
       setPaidCredits(0);
+      setFreeRoundSource("local");
+      return;
+    }
+
+    setAvailabilityLoading(true);
+    try {
+      const { available, source } = await checkFreeRoundAvailable(walletAddress);
+      setFreeAvailable(available);
+      setFreeRoundSource(source);
+      setPaidCredits(getUnusedPaidCreditCount(walletAddress));
+    } finally {
+      setAvailabilityLoading(false);
     }
   }, [walletAddress]);
 
   useEffect(() => {
-    refreshAvailability();
+    void refreshAvailability();
     setResetDate(
       getNextMondayReset().toLocaleDateString("en-US", {
         weekday: "long",
@@ -91,15 +101,32 @@ export function StartScreen({ onStartQuiz }: StartScreenProps) {
     );
   }, [refreshAvailability]);
 
-  const handleFreeRound = () => {
-    if (!walletAddress) return;
-    markFreeRoundUsed(walletAddress);
-    setFreeAvailable(false);
-    onStartQuiz("free");
-    toast({
-      title: "Free round activated! 🐂",
-      description: "Good luck, bull.",
-    });
+  const handleFreeRound = async () => {
+    if (!walletAddress || isClaimingFree) return;
+
+    setIsClaimingFree(true);
+    try {
+      const result = await claimFreeRound(walletAddress);
+      if (!result.ok) {
+        setFreeAvailable(false);
+        toast({
+          title: "Free round already used",
+          description: "This wallet played its free round this week.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setFreeAvailable(false);
+      setFreeRoundSource(result.source);
+      onStartQuiz("free");
+      toast({
+        title: "Free round activated! 🐂",
+        description: "Good luck, bull.",
+      });
+    } finally {
+      setIsClaimingFree(false);
+    }
   };
 
   const handlePurchasedRound = () => {
@@ -110,7 +137,7 @@ export function StartScreen({ onStartQuiz }: StartScreenProps) {
         description: "Buy a new round to continue.",
         variant: "destructive",
       });
-      refreshAvailability();
+      void refreshAvailability();
       return;
     }
     setPaidCredits((c) => Math.max(0, c - 1));
@@ -142,7 +169,7 @@ export function StartScreen({ onStartQuiz }: StartScreenProps) {
       if (!consumePaidRoundCredit(walletAddress)) {
         throw new Error("Failed to activate purchased round");
       }
-      refreshAvailability();
+      await refreshAvailability();
       onStartQuiz("paid");
       toast({
         title: "Payment confirmed! 🎉",
@@ -204,15 +231,30 @@ export function StartScreen({ onStartQuiz }: StartScreenProps) {
               </Button>
             )}
 
-            {freeAvailable ? (
+            {availabilityLoading ? (
+              <Button variant="bull" size="lg" className="w-full" disabled>
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                Checking free round...
+              </Button>
+            ) : freeAvailable ? (
               <Button
                 variant="bull"
                 size="lg"
                 className="w-full"
-                onClick={handleFreeRound}
+                onClick={() => void handleFreeRound()}
+                disabled={isClaimingFree}
               >
-                <Gift className="mr-2 h-5 w-5" />
-                Play Free Weekly Round
+                {isClaimingFree ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Starting round...
+                  </>
+                ) : (
+                  <>
+                    <Gift className="mr-2 h-5 w-5" />
+                    Play Free Weekly Round
+                  </>
+                )}
               </Button>
             ) : paidCredits === 0 ? (
               <div className="space-y-3">
@@ -272,11 +314,15 @@ export function StartScreen({ onStartQuiz }: StartScreenProps) {
               disabled
             >
               <Play className="mr-2 h-4 w-4" />
-              {freeAvailable
-                ? "1 free round available this week"
-                : paidCredits > 0
-                  ? `${paidCredits} purchased round(s) ready`
-                  : `Extra rounds: ${ROUND_COST_SOL} SOL each`}
+              {availabilityLoading
+                ? "Checking weekly free round..."
+                : freeAvailable
+                  ? freeRoundSource === "server"
+                    ? "1 free round available (tracked globally)"
+                    : "1 free round available this week"
+                  : paidCredits > 0
+                    ? `${paidCredits} purchased round(s) ready`
+                    : `Extra rounds: ${ROUND_COST_SOL} SOL each`}
             </Button>
           </>
         )}

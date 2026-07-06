@@ -11,6 +11,7 @@ import {
   getResultTitle,
   type QuizState,
 } from "@/lib/quiz";
+import { claimFreeRound } from "@/lib/free-round";
 import { submitScore } from "@/lib/leaderboard";
 import {
   saveQuizSession,
@@ -87,6 +88,9 @@ export function QuizGame({
         setFinalElapsedMs(completedMs);
         clearQuizSession();
         const result = getResultTitle(newState.score, newState.questions.length);
+        if (roundType === "free") {
+          void claimFreeRound(walletAddress);
+        }
         void submitScore(
           walletAddress,
           newState.score,
