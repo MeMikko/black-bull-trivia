@@ -36,7 +36,7 @@ interface StartScreenProps {
 }
 
 export function StartScreen({ onStartQuiz }: StartScreenProps) {
-  const { publicKey, connected, sendTransaction, signTransaction } = useWallet();
+  const { publicKey, connected, sendTransaction } = useWallet();
   const { connection } = useConnection();
   const { toast } = useToast();
   const [freeAvailable, setFreeAvailable] = useState(false);
@@ -99,7 +99,7 @@ export function StartScreen({ onStartQuiz }: StartScreenProps) {
   };
 
   const handlePaidRound = async () => {
-    if (!publicKey || !connection || (!sendTransaction && !signTransaction)) {
+    if (!publicKey || !connection || !sendTransaction) {
       toast({
         title: "Wallet not ready",
         description: "Please connect a wallet that supports transactions.",
@@ -113,7 +113,6 @@ export function StartScreen({ onStartQuiz }: StartScreenProps) {
       const signature = await sendRoundPayment(
         publicKey,
         sendTransaction,
-        signTransaction,
         connection
       );
       addPaidRoundCredit(walletAddress, signature);

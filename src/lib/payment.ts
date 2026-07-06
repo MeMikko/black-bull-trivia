@@ -4,7 +4,7 @@ import {
   SystemProgram,
   Transaction,
   LAMPORTS_PER_SOL,
-  type TransactionSignature,
+  type SendOptions,
 } from "@solana/web3.js";
 import { PRIZE_WALLET, ROUND_COST_LAMPORTS } from "./constants";
 
@@ -14,18 +14,6 @@ const POLL_INTERVAL_MS = 1_500;
 function isMobileBrowser(): boolean {
   if (typeof navigator === "undefined") return false;
   return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
-}
-
-function isRetryableError(err: unknown): boolean {
-  const msg = err instanceof Error ? err.message : String(err);
-  return (
-    msg.includes("Missing signature") ||
-    msg.includes("Signature verification failed") ||
-    msg.includes("recentBlockhash required") ||
-    msg.includes("Blockhash not found") ||
-    msg.includes("block height exceeded") ||
-    msg.includes("has expired")
-  );
 }
 
 function normalizeWalletError(err: unknown): Error {
@@ -61,20 +49,6 @@ async function buildTransaction(
       lamports: ROUND_COST_LAMPORTS,
     })
   );
-}
-
-function assertFeePayerSigned(
-  transaction: Transaction,
-  publicKey: PublicKey
-): void {
-  const entry = transaction.signatures.find((s) =>
-    s.publicKey.equals(publicKey)
-  );
-  if (!entry?.signature) {
-    throw new Error(
-      "Wallet did not sign the transaction. Please try again in your wallet app."
-    );
-  }
 }
 
 async function pollForConfirmation(
@@ -113,88 +87,40 @@ async function pollForConfirmation(
   );
 }
 
-/** Sign in wallet, broadcast immediately — most reliable on mobile */
-async function sendViaSignTransaction(
-  publicKey: PublicKey,
-  signTransaction: (tx: Transaction) => Promise<Transaction>,
-  connection: Connection,
-  prizeWallet: PublicKey
-): Promise<TransactionSignature> {
-  const transaction = await buildTransaction(connection, publicKey, prizeWallet);
-  const signed = await signTransaction(transaction);
-  assertFeePayerSigned(signed, publicKey);
-
-  return connection.sendRawTransaction(signed.serialize(), {
-    skipPreflight: true,
-    maxRetries: 5,
-  });
-}
-
-/** Wallet signs and broadcasts — desktop fallback */
-async function sendViaSendTransaction(
-  publicKey: PublicKey,
-  sendTransaction: (
-    transaction: Transaction,
-    connection: Connection
-  ) => Promise<TransactionSignature>,
-  connection: Connection,
-  prizeWallet: PublicKey
-): Promise<TransactionSignature> {
-  const transaction = await buildTransaction(connection, publicKey, prizeWallet);
-  return sendTransaction(transaction, connection);
-}
-
+/**
+ * Use wallet adapter sendTransaction only — Phantom routes this to
+ * signAndSendTransaction, which is reliable on mobile. Do not use
+ * signTransaction + sendRawTransaction; that causes "Missing signature".
+ */
 export async function sendRoundPayment(
   publicKey: PublicKey,
   sendTransaction:
-    | ((transaction: Transaction, connection: Connection) => Promise<string>)
-    | undefined,
-  signTransaction:
-    | ((transaction: Transaction) => Promise<Transaction>)
+    | ((
+        transaction: Transaction,
+        connection: Connection,
+        options?: SendOptions
+      ) => Promise<string>)
     | undefined,
   connection: Connection
 ): Promise<string> {
-  const prizeWallet = new PublicKey(PRIZE_WALLET);
-  const mobile = isMobileBrowser();
-
-  const trySign = async () => {
-    if (!signTransaction) throw new Error("Wallet cannot sign transactions.");
-    return sendViaSignTransaction(
-      publicKey,
-      signTransaction,
-      connection,
-      prizeWallet
-    );
-  };
-
-  const trySend = async () => {
-    if (!sendTransaction) throw new Error("Wallet cannot send transactions.");
-    return sendViaSendTransaction(
-      publicKey,
-      sendTransaction,
-      connection,
-      prizeWallet
-    );
-  };
-
-  const attempts = mobile ? [trySign, trySend] : [trySign, trySend];
-
-  let signature: string | undefined;
-  let lastError: Error | null = null;
-
-  for (const attempt of attempts) {
-    try {
-      signature = await attempt();
-      lastError = null;
-      break;
-    } catch (err) {
-      lastError = normalizeWalletError(err);
-      if (lastError.message.includes("cancelled")) throw lastError;
-      if (!isRetryableError(err)) throw lastError;
-    }
+  if (!sendTransaction) {
+    throw new Error("Wallet cannot send transactions.");
   }
 
-  if (lastError || !signature) throw lastError ?? new Error("Payment failed.");
+  const prizeWallet = new PublicKey(PRIZE_WALLET);
+  const mobile = isMobileBrowser();
+  const transaction = await buildTransaction(connection, publicKey, prizeWallet);
+
+  let signature: string;
+  try {
+    signature = await sendTransaction(transaction, connection, {
+      skipPreflight: mobile,
+      maxRetries: 5,
+      preflightCommitment: "confirmed",
+    });
+  } catch (err) {
+    throw normalizeWalletError(err);
+  }
 
   try {
     await pollForConfirmation(connection, signature);
