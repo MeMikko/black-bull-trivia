@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Trophy, Medal } from "lucide-react";
+import { Trophy, Medal, Clock } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { getWeeklyLeaderboard, type LeaderboardEntry } from "@/lib/leaderboard";
+import { formatElapsed } from "@/lib/timer";
 import { truncateAddress } from "@/lib/utils";
 import { getCurrentWeekId } from "@/lib/weekly";
 
@@ -29,6 +30,9 @@ export function Leaderboard() {
           </CardTitle>
           <Badge variant="gold">{getCurrentWeekId()}</Badge>
         </div>
+        <p className="text-xs text-muted-foreground">
+          Ties broken by fastest time
+        </p>
       </CardHeader>
       <CardContent>
         {entries.length === 0 ? (
@@ -59,9 +63,17 @@ export function Leaderboard() {
                     {entry.title}
                   </p>
                 </div>
-                <Badge variant="green" className="shrink-0">
-                  {entry.score}/{entry.total}
-                </Badge>
+                <div className="flex shrink-0 flex-col items-end gap-1">
+                  <Badge variant="green">
+                    {entry.score}/{entry.total}
+                  </Badge>
+                  {entry.elapsedMs !== undefined && (
+                    <span className="flex items-center gap-0.5 font-mono text-[10px] text-muted-foreground">
+                      <Clock className="h-2.5 w-2.5" />
+                      {formatElapsed(entry.elapsedMs)}
+                    </span>
+                  )}
+                </div>
               </li>
             ))}
           </ul>

@@ -7,14 +7,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { type ResultTitle } from "@/lib/quiz";
+import { formatElapsed } from "@/lib/timer";
 import { truncateAddress } from "@/lib/utils";
-
 
 interface ResultCardProps {
   score: number;
   total: number;
   result: ResultTitle;
   walletAddress: string;
+  elapsedMs: number;
   onPlayAgain: () => void;
 }
 
@@ -30,6 +31,7 @@ export function ResultCard({
   total,
   result,
   walletAddress,
+  elapsedMs,
   onPlayAgain,
 }: ResultCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
@@ -94,6 +96,9 @@ export function ResultCard({
             <span className="text-2xl text-muted-foreground">/{total}</span>
           </p>
           <p className="mt-1 text-sm text-accent">correct answers</p>
+          <p className="mt-2 font-mono text-sm text-primary">
+            ⏱ {formatElapsed(elapsedMs)}
+          </p>
         </div>
 
         <p className="mb-4 text-center text-sm italic text-muted-foreground">

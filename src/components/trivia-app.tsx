@@ -22,6 +22,7 @@ export function TriviaApp() {
   const [view, setView] = useState<AppView>("start");
   const [initialQuiz, setInitialQuiz] = useState<QuizState | null>(null);
   const [roundType, setRoundType] = useState<RoundType>("free");
+  const [startedAtMs, setStartedAtMs] = useState(Date.now());
   const [hydrated, setHydrated] = useState(false);
 
   const walletAddress = publicKey?.toBase58() ?? "";
@@ -37,6 +38,7 @@ export function TriviaApp() {
     if (session) {
       setInitialQuiz(session.quiz);
       setRoundType(session.roundType);
+      setStartedAtMs(session.startedAtMs);
       setView("quiz");
     }
   }, [hydrated, walletAddress]);
@@ -44,16 +46,21 @@ export function TriviaApp() {
   const handleStartQuiz = useCallback(
     (type: RoundType) => {
       const quiz = createQuizRound(type);
+      const now = Date.now();
+
       if (walletAddress) {
         saveQuizSession({
           wallet: walletAddress,
           quiz,
           roundType: type,
-          startedAt: new Date().toISOString(),
+          startedAt: new Date(now).toISOString(),
+          startedAtMs: now,
         });
       }
+
       setInitialQuiz(quiz);
       setRoundType(type);
+      setStartedAtMs(now);
       setView("quiz");
     },
     [walletAddress]
@@ -96,6 +103,7 @@ export function TriviaApp() {
                 walletAddress={walletAddress}
                 initialQuiz={initialQuiz}
                 roundType={roundType}
+                startedAtMs={startedAtMs}
                 onExit={handleExitQuiz}
               />
             ) : (

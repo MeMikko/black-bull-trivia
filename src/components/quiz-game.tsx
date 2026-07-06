@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ChevronRight, Zap } from "lucide-react";
+import { ChevronRight, Clock, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -17,6 +17,7 @@ import {
   clearQuizSession,
   type RoundType,
 } from "@/lib/quiz-session";
+import { formatElapsed, getElapsedMs } from "@/lib/timer";
 import { ResultCard } from "@/components/result-card";
 import { QUESTIONS_PER_ROUND } from "@/lib/constants";
 
@@ -24,6 +25,7 @@ interface QuizGameProps {
   walletAddress: string;
   initialQuiz: QuizState;
   roundType: RoundType;
+  startedAtMs: number;
   onExit: () => void;
 }
 
@@ -31,11 +33,23 @@ export function QuizGame({
   walletAddress,
   initialQuiz,
   roundType,
+  startedAtMs,
   onExit,
 }: QuizGameProps) {
   const [quiz, setQuiz] = useState<QuizState>(initialQuiz);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [showFeedback, setShowFeedback] = useState(false);
+  const [elapsedMs, setElapsedMs] = useState(() => getElapsedMs(startedAtMs));
+  const [finalElapsedMs, setFinalElapsedMs] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (quiz.isComplete || finalElapsedMs !== null) return;
+
+    const tick = () => setElapsedMs(getElapsedMs(startedAtMs));
+    tick();
+    const id = setInterval(tick, 100);
+    return () => clearInterval(id);
+  }, [startedAtMs, quiz.isComplete, finalElapsedMs]);
 
   useEffect(() => {
     if (!quiz.isComplete) {
@@ -43,15 +57,18 @@ export function QuizGame({
         wallet: walletAddress,
         quiz,
         roundType,
-        startedAt: new Date().toISOString(),
+        startedAt: new Date(startedAtMs).toISOString(),
+        startedAtMs,
       });
     }
-  }, [quiz, walletAddress, roundType]);
+  }, [quiz, walletAddress, roundType, startedAtMs]);
 
   const currentQuestion = quiz.questions[quiz.currentIndex];
   const progress = quiz.isComplete
     ? 100
     : (quiz.currentIndex / QUESTIONS_PER_ROUND) * 100;
+
+  const displayElapsed = finalElapsedMs ?? elapsedMs;
 
   const handleSelect = (index: number) => {
     if (showFeedback || quiz.isComplete) return;
@@ -66,13 +83,16 @@ export function QuizGame({
       setShowFeedback(false);
 
       if (newState.isComplete) {
+        const completedMs = getElapsedMs(startedAtMs);
+        setFinalElapsedMs(completedMs);
         clearQuizSession();
         const result = getResultTitle(newState.score, newState.questions.length);
         submitScore(
           walletAddress,
           newState.score,
           newState.questions.length,
-          result.title
+          result.title,
+          completedMs
         );
       }
     }, 800);
@@ -83,7 +103,7 @@ export function QuizGame({
     onExit();
   };
 
-  if (quiz.isComplete) {
+  if (quiz.isComplete && finalElapsedMs !== null) {
     const result = getResultTitle(quiz.score, quiz.questions.length);
     return (
       <ResultCard
@@ -91,6 +111,7 @@ export function QuizGame({
         total={quiz.questions.length}
         result={result}
         walletAddress={walletAddress}
+        elapsedMs={finalElapsedMs}
         onPlayAgain={handlePlayAgain}
       />
     );
@@ -103,14 +124,26 @@ export function QuizGame({
   return (
     <Card className="mx-auto w-full max-w-2xl border-primary/20 bg-card/80 backdrop-blur-sm">
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <CardTitle className="flex items-center gap-2 text-lg">
             <Zap className="h-5 w-5 text-primary" />
             Question {quiz.currentIndex + 1} of {QUESTIONS_PER_ROUND}
           </CardTitle>
-          <Badge variant="green">Score: {quiz.score}</Badge>
+          <div className="flex items-center gap-2">
+            <Badge
+              variant="outline"
+              className="gap-1 font-mono tabular-nums text-primary"
+            >
+              <Clock className="h-3 w-3" />
+              {formatElapsed(displayElapsed)}
+            </Badge>
+            <Badge variant="green">Score: {quiz.score}</Badge>
+          </div>
         </div>
         <Progress value={progress} className="mt-2" />
+        <p className="mt-1 text-xs text-muted-foreground">
+          Faster time wins ties on the leaderboard
+        </p>
       </CardHeader>
       <CardContent className="space-y-4">
         {currentQuestion.category && (
