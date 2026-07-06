@@ -16,12 +16,13 @@ function isMobileBrowser(): boolean {
   return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
 }
 
-function isSignatureError(err: unknown): boolean {
+function isRetryableError(err: unknown): boolean {
   const msg = err instanceof Error ? err.message : String(err);
   return (
     msg.includes("Missing signature") ||
     msg.includes("Signature verification failed") ||
-    msg.includes("not signed") ||
+    msg.includes("recentBlockhash required") ||
+    msg.includes("Blockhash not found") ||
     msg.includes("block height exceeded") ||
     msg.includes("has expired")
   );
@@ -41,12 +42,25 @@ function normalizeWalletError(err: unknown): Error {
   return err instanceof Error ? err : new Error(message);
 }
 
-function buildTransferInstruction(publicKey: PublicKey, prizeWallet: PublicKey) {
-  return SystemProgram.transfer({
-    fromPubkey: publicKey,
-    toPubkey: prizeWallet,
-    lamports: ROUND_COST_LAMPORTS,
-  });
+async function buildTransaction(
+  connection: Connection,
+  publicKey: PublicKey,
+  prizeWallet: PublicKey
+): Promise<Transaction> {
+  const { blockhash, lastValidBlockHeight } =
+    await connection.getLatestBlockhash("confirmed");
+
+  return new Transaction({
+    feePayer: publicKey,
+    blockhash,
+    lastValidBlockHeight,
+  }).add(
+    SystemProgram.transfer({
+      fromPubkey: publicKey,
+      toPubkey: prizeWallet,
+      lamports: ROUND_COST_LAMPORTS,
+    })
+  );
 }
 
 function assertFeePayerSigned(
@@ -99,22 +113,14 @@ async function pollForConfirmation(
   );
 }
 
-/** Mobile-friendly: sign in wallet, then broadcast immediately */
+/** Sign in wallet, broadcast immediately — most reliable on mobile */
 async function sendViaSignTransaction(
   publicKey: PublicKey,
   signTransaction: (tx: Transaction) => Promise<Transaction>,
   connection: Connection,
   prizeWallet: PublicKey
 ): Promise<TransactionSignature> {
-  const { blockhash, lastValidBlockHeight } =
-    await connection.getLatestBlockhash("confirmed");
-
-  const transaction = new Transaction({
-    feePayer: publicKey,
-    blockhash,
-    lastValidBlockHeight,
-  }).add(buildTransferInstruction(publicKey, prizeWallet));
-
+  const transaction = await buildTransaction(connection, publicKey, prizeWallet);
   const signed = await signTransaction(transaction);
   assertFeePayerSigned(signed, publicKey);
 
@@ -124,7 +130,7 @@ async function sendViaSignTransaction(
   });
 }
 
-/** Desktop: wallet fills blockhash and broadcasts */
+/** Wallet signs and broadcasts — desktop fallback */
 async function sendViaSendTransaction(
   publicKey: PublicKey,
   sendTransaction: (
@@ -134,11 +140,7 @@ async function sendViaSendTransaction(
   connection: Connection,
   prizeWallet: PublicKey
 ): Promise<TransactionSignature> {
-  const transaction = new Transaction().add(
-    buildTransferInstruction(publicKey, prizeWallet)
-  );
-  transaction.feePayer = publicKey;
-
+  const transaction = await buildTransaction(connection, publicKey, prizeWallet);
   return sendTransaction(transaction, connection);
 }
 
@@ -154,9 +156,6 @@ export async function sendRoundPayment(
 ): Promise<string> {
   const prizeWallet = new PublicKey(PRIZE_WALLET);
   const mobile = isMobileBrowser();
-
-  let signature: string;
-  let lastError: Error | null = null;
 
   const trySign = async () => {
     if (!signTransaction) throw new Error("Wallet cannot sign transactions.");
@@ -178,9 +177,10 @@ export async function sendRoundPayment(
     );
   };
 
-  const attempts = mobile
-    ? [trySign, trySend]
-    : [trySend, trySign];
+  const attempts = mobile ? [trySign, trySend] : [trySign, trySend];
+
+  let signature: string | undefined;
+  let lastError: Error | null = null;
 
   for (const attempt of attempts) {
     try {
@@ -190,21 +190,21 @@ export async function sendRoundPayment(
     } catch (err) {
       lastError = normalizeWalletError(err);
       if (lastError.message.includes("cancelled")) throw lastError;
-      if (!isSignatureError(err)) throw lastError;
+      if (!isRetryableError(err)) throw lastError;
     }
   }
 
-  if (lastError) throw lastError;
+  if (lastError || !signature) throw lastError ?? new Error("Payment failed.");
 
   try {
-    await pollForConfirmation(connection, signature!);
+    await pollForConfirmation(connection, signature);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     if (message.includes("timed out")) throw err;
     throw normalizeWalletError(err);
   }
 
-  return signature!;
+  return signature;
 }
 
 export function formatSolAmount(lamports: number): string {
