@@ -15,7 +15,7 @@ A minimal viable trivia quiz app for the **$ANSEM** community. Built with Next.j
 - **On-chain payment** — SOL transferred to hardcoded prize wallet
 - **Funny result titles** — Diamond Hand Bull, Stimmy Legend, Charge Forward Champion, etc.
 - **Shareable result card** — download PNG via `html2canvas`
-- **Weekly leaderboard** — top 10 scores (localStorage)
+- **Weekly leaderboard** — top 10 scores (shared via Vercel KV / Redis)
 - **Disclaimers** — shown in header, footer, quiz, results, and leaderboard
 
 ## Tech Stack
@@ -27,7 +27,7 @@ A minimal viable trivia quiz app for the **$ANSEM** community. Built with Next.j
 | Styling | Tailwind CSS + shadcn/ui |
 | Wallet | @solana/wallet-adapter |
 | State | React state + TanStack React Query |
-| Storage | localStorage (weekly plays + leaderboard) |
+| Storage | localStorage (weekly plays) + Vercel KV (leaderboard) |
 | Sharing | html2canvas |
 
 ## Quick Start
@@ -141,10 +141,17 @@ Replace or extend `src/data/questions.json`. Each question needs:
 
 ### Leaderboard
 
-- Top 10 scores for the current week
-- Stored in `localStorage` (client-side only)
-- Best score per wallet per week is kept
-- For production, replace with a backend API + database
+- Top 10 scores for the current week (shared across all devices)
+- Stored in **Vercel KV / Upstash Redis** via `/api/leaderboard`
+- Ties broken by fastest completion time
+- Best score per wallet per week is kept (faster time wins on equal score)
+- Falls back to browser `localStorage` if KV is not configured (device-only)
+
+**Enable shared leaderboard on Vercel:**
+
+1. Vercel Dashboard → your project → **Storage** → Create **Redis** (Upstash)
+2. Connect it to the project — this sets `KV_REST_API_URL` and `KV_REST_API_TOKEN`
+3. Redeploy
 
 ## Project Structure
 
@@ -197,10 +204,10 @@ Any platform supporting Next.js 14 works. Ensure environment variables are set.
 
 ## Limitations (MVP)
 
-- **localStorage only** — weekly plays and leaderboard are per-browser, not server-enforced
+- **Weekly free plays** — tracked in localStorage per browser (not server-enforced)
 - **No anti-cheat** — users can clear localStorage for extra free rounds
 - **Mainnet payments** — real SOL transactions; use small amounts when testing
-- **No backend** — for production, add API routes + database for persistent leaderboard
+- **Leaderboard requires Vercel KV** — without Redis integration, scores are device-only
 
 ## Development Tips
 

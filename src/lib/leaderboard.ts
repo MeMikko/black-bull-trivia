@@ -1,46 +1,34 @@
+import {
+  getTopEntries,
+  mergeEntry,
+  type LeaderboardEntry,
+} from "./leaderboard-logic";
 import { getCurrentWeekId } from "./weekly";
 
-const LEADERBOARD_KEY = "black-bull-leaderboard";
+export type { LeaderboardEntry };
 
-export interface LeaderboardEntry {
-  wallet: string;
-  score: number;
-  total: number;
-  title: string;
-  weekId: string;
-  playedAt: string;
-  /** Round completion time in ms — lower is better for tie-breaks */
-  elapsedMs?: number;
-}
+const LOCAL_KEY = "black-bull-leaderboard";
 
-function getAllEntries(): LeaderboardEntry[] {
+function getLocalEntries(): LeaderboardEntry[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = localStorage.getItem(LEADERBOARD_KEY);
+    const raw = localStorage.getItem(LOCAL_KEY);
     return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
   }
 }
 
-function saveEntries(entries: LeaderboardEntry[]): void {
+function saveLocalEntries(entries: LeaderboardEntry[]): void {
   if (typeof window === "undefined") return;
-  localStorage.setItem(LEADERBOARD_KEY, JSON.stringify(entries));
+  localStorage.setItem(LOCAL_KEY, JSON.stringify(entries));
 }
 
-function isBetterEntry(
-  candidate: LeaderboardEntry,
-  existing: LeaderboardEntry
-): boolean {
-  if (candidate.score > existing.score) return true;
-  if (candidate.score < existing.score) return false;
-
-  const candidateTime = candidate.elapsedMs ?? Infinity;
-  const existingTime = existing.elapsedMs ?? Infinity;
-  return candidateTime < existingTime;
+function getLocalWeeklyLeaderboard(limit = 10): LeaderboardEntry[] {
+  return getTopEntries(getLocalEntries(), getCurrentWeekId(), limit);
 }
 
-export function submitScore(
+function submitScoreLocal(
   wallet: string,
   score: number,
   total: number,
@@ -48,12 +36,6 @@ export function submitScore(
   elapsedMs: number
 ): void {
   const weekId = getCurrentWeekId();
-  const entries = getAllEntries();
-
-  const existingIndex = entries.findIndex(
-    (e) => e.wallet === wallet && e.weekId === weekId
-  );
-
   const newEntry: LeaderboardEntry = {
     wallet,
     score,
@@ -63,29 +45,60 @@ export function submitScore(
     playedAt: new Date().toISOString(),
     elapsedMs,
   };
+  saveLocalEntries(mergeEntry(getLocalEntries(), newEntry));
+}
 
-  if (existingIndex >= 0) {
-    if (isBetterEntry(newEntry, entries[existingIndex])) {
-      entries[existingIndex] = newEntry;
+export async function getWeeklyLeaderboard(
+  limit = 10
+): Promise<{ entries: LeaderboardEntry[]; source: "server" | "local" }> {
+  const weekId = getCurrentWeekId();
+
+  try {
+    const res = await fetch(
+      `/api/leaderboard?weekId=${encodeURIComponent(weekId)}&limit=${limit}`,
+      { cache: "no-store" }
+    );
+
+    if (res.ok) {
+      const entries = (await res.json()) as LeaderboardEntry[];
+      return { entries, source: "server" };
     }
-  } else {
-    entries.push(newEntry);
+  } catch {
+    /* fall through to local */
   }
 
-  saveEntries(entries);
+  return { entries: getLocalWeeklyLeaderboard(limit), source: "local" };
 }
 
-function compareEntries(a: LeaderboardEntry, b: LeaderboardEntry): number {
-  if (b.score !== a.score) return b.score - a.score;
-  const aTime = a.elapsedMs ?? Infinity;
-  const bTime = b.elapsedMs ?? Infinity;
-  return aTime - bTime;
-}
-
-export function getWeeklyLeaderboard(limit = 10): LeaderboardEntry[] {
+export async function submitScore(
+  wallet: string,
+  score: number,
+  total: number,
+  title: string,
+  elapsedMs: number
+): Promise<void> {
   const weekId = getCurrentWeekId();
-  return getAllEntries()
-    .filter((e) => e.weekId === weekId)
-    .sort(compareEntries)
-    .slice(0, limit);
+  const payload: LeaderboardEntry = {
+    wallet,
+    score,
+    total,
+    title,
+    weekId,
+    playedAt: new Date().toISOString(),
+    elapsedMs,
+  };
+
+  try {
+    const res = await fetch("/api/leaderboard", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (res.ok) return;
+  } catch {
+    /* fall through to local */
+  }
+
+  submitScoreLocal(wallet, score, total, title, elapsedMs);
 }

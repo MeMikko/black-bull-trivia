@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Trophy, Medal, Clock } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { Trophy, Medal, Clock, Globe, Smartphone } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { getWeeklyLeaderboard, type LeaderboardEntry } from "@/lib/leaderboard";
@@ -13,12 +13,20 @@ const medalColors = ["text-primary", "text-muted-foreground", "text-accent"];
 
 export function Leaderboard() {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
+  const [source, setSource] = useState<"server" | "local">("local");
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    setEntries(getWeeklyLeaderboard(10));
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    const result = await getWeeklyLeaderboard(10);
+    setEntries(result.entries);
+    setSource(result.source);
+    setLoading(false);
   }, []);
 
-  const refresh = () => setEntries(getWeeklyLeaderboard(10));
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
 
   return (
     <Card className="border-primary/20 bg-card/80 backdrop-blur-sm">
@@ -30,12 +38,29 @@ export function Leaderboard() {
           </CardTitle>
           <Badge variant="gold">{getCurrentWeekId()}</Badge>
         </div>
-        <p className="text-xs text-muted-foreground">
-          Ties broken by fastest time
-        </p>
+        <div className="flex flex-wrap items-center gap-2 pt-1">
+          <p className="text-xs text-muted-foreground">
+            Ties broken by fastest time
+          </p>
+          {source === "server" ? (
+            <Badge variant="green" className="gap-1 text-[10px]">
+              <Globe className="h-2.5 w-2.5" />
+              Global
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="gap-1 text-[10px]">
+              <Smartphone className="h-2.5 w-2.5" />
+              This device only
+            </Badge>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
-        {entries.length === 0 ? (
+        {loading ? (
+          <p className="py-6 text-center text-sm text-muted-foreground">
+            Loading scores...
+          </p>
+        ) : entries.length === 0 ? (
           <p className="py-6 text-center text-sm text-muted-foreground">
             No scores yet this week. Be the first bull to charge!
           </p>

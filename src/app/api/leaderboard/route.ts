@@ -1,0 +1,92 @@
+import { kv } from "@vercel/kv";
+import { NextResponse } from "next/server";
+import {
+  getTopEntries,
+  mergeEntry,
+  type LeaderboardEntry,
+} from "@/lib/leaderboard-logic";
+import { getCurrentWeekId } from "@/lib/weekly";
+
+const KEY_PREFIX = "leaderboard:";
+
+function kvConfigured(): boolean {
+  return Boolean(
+    process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN
+  );
+}
+
+async function loadWeek(weekId: string): Promise<LeaderboardEntry[]> {
+  const entries = await kv.get<LeaderboardEntry[]>(`${KEY_PREFIX}${weekId}`);
+  return entries ?? [];
+}
+
+export async function GET(request: Request) {
+  if (!kvConfigured()) {
+    return NextResponse.json(
+      { error: "Leaderboard storage not configured" },
+      { status: 503 }
+    );
+  }
+
+  const { searchParams } = new URL(request.url);
+  const weekId = searchParams.get("weekId") ?? getCurrentWeekId();
+  const limit = Math.min(
+    Number(searchParams.get("limit") ?? "10") || 10,
+    50
+  );
+
+  try {
+    const entries = await loadWeek(weekId);
+    return NextResponse.json(getTopEntries(entries, weekId, limit));
+  } catch {
+    return NextResponse.json(
+      { error: "Failed to load leaderboard" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: Request) {
+  if (!kvConfigured()) {
+    return NextResponse.json(
+      { error: "Leaderboard storage not configured" },
+      { status: 503 }
+    );
+  }
+
+  try {
+    const body = (await request.json()) as Partial<LeaderboardEntry>;
+
+    if (
+      !body.wallet ||
+      typeof body.score !== "number" ||
+      typeof body.total !== "number" ||
+      !body.title
+    ) {
+      return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+    }
+
+    const weekId = body.weekId ?? getCurrentWeekId();
+    const newEntry: LeaderboardEntry = {
+      wallet: body.wallet,
+      score: body.score,
+      total: body.total,
+      title: body.title,
+      weekId,
+      playedAt: body.playedAt ?? new Date().toISOString(),
+      elapsedMs: body.elapsedMs,
+    };
+
+    const key = `${KEY_PREFIX}${weekId}`;
+    const entries = await loadWeek(weekId);
+    const merged = mergeEntry(entries, newEntry);
+    await kv.set(key, merged);
+
+    return NextResponse.json({ ok: true });
+  } catch {
+    return NextResponse.json(
+      { error: "Failed to save score" },
+      { status: 500 }
+    );
+  }
+}

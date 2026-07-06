@@ -87,7 +87,7 @@ export function QuizGame({
         setFinalElapsedMs(completedMs);
         clearQuizSession();
         const result = getResultTitle(newState.score, newState.questions.length);
-        submitScore(
+        void submitScore(
           walletAddress,
           newState.score,
           newState.questions.length,
