@@ -35,7 +35,7 @@ interface StartScreenProps {
   onStartQuiz: (roundType: RoundType) => void;
 }
 
-function PaymentDetails() {
+function PaymentDetails({ walletName }: { walletName?: string }) {
   const recipient = getPaymentRecipient();
 
   return (
@@ -49,15 +49,17 @@ function PaymentDetails() {
         {recipient}
       </p>
       <p className="mt-2 text-[11px]">
-        Phantom may warn on new sites — this is a simple SOL transfer, not a
-        token approval. Safe to confirm if you trust this app.
+        {walletName === "Jupiter"
+          ? "Jupiter may warn on new sites — this is only a simple SOL transfer to the prize pool, not a token approval. Safe to confirm if you trust Black Bull Trivia."
+          : "Your wallet may warn on new sites — this is a simple SOL transfer, not a token approval. Safe to confirm if you trust this app."}
       </p>
     </div>
   );
 }
 
 export function StartScreen({ onStartQuiz }: StartScreenProps) {
-  const { publicKey, connected, sendTransaction } = useWallet();
+  const { publicKey, connected, sendTransaction, wallet } = useWallet();
+  const walletName = wallet?.adapter.name;
   const { connection } = useConnection();
   const { toast } = useToast();
   const [freeAvailable, setFreeAvailable] = useState(false);
@@ -217,7 +219,7 @@ export function StartScreen({ onStartQuiz }: StartScreenProps) {
                 <p className="text-center text-sm text-muted-foreground">
                   Free round used this week. Resets {resetDate}.
                 </p>
-                <PaymentDetails />
+                <PaymentDetails walletName={walletName} />
                 <Button
                   variant="bull"
                   size="lg"
@@ -240,7 +242,7 @@ export function StartScreen({ onStartQuiz }: StartScreenProps) {
               </div>
             ) : (
               <div className="space-y-3">
-                <PaymentDetails />
+                <PaymentDetails walletName={walletName} />
                 <Button
                 variant="outline"
                 size="lg"
