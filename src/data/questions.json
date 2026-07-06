@@ -1,0 +1,552 @@
+[
+  {
+    "id": 1,
+    "question": "What blockchain is $ANSEM primarily associated with?",
+    "options": ["Ethereum", "Solana", "Bitcoin", "Avalanche"],
+    "correctIndex": 1,
+    "category": "basics"
+  },
+  {
+    "id": 2,
+    "question": "What animal is the Black Bull mascot?",
+    "options": ["Bear", "Bull", "Wolf", "Ape"],
+    "correctIndex": 1,
+    "category": "basics"
+  },
+  {
+    "id": 3,
+    "question": "What does 'WAGMI' stand for?",
+    "options": [
+      "We All Get Money Instantly",
+      "We're All Gonna Make It",
+      "Wallet Always Generates Max Income",
+      "When Assets Go Moon Immediately"
+    ],
+    "correctIndex": 1,
+    "category": "memes"
+  },
+  {
+    "id": 4,
+    "question": "What is a 'diamond hands' holder known for?",
+    "options": [
+      "Selling at the first dip",
+      "Holding through volatility",
+      "Only trading memecoins",
+      "Never using a wallet"
+    ],
+    "correctIndex": 1,
+    "category": "memes"
+  },
+  {
+    "id": 5,
+    "question": "What does DYOR mean?",
+    "options": [
+      "Deploy Your Own Rug",
+      "Do Your Own Research",
+      "Dump Your Only Reserve",
+      "Diamond Yield On Repeat"
+    ],
+    "correctIndex": 1,
+    "category": "memes"
+  },
+  {
+    "id": 6,
+    "question": "What is Solana's native token symbol?",
+    "options": ["SOL", "SLN", "SON", "SUN"],
+    "correctIndex": 0,
+    "category": "solana"
+  },
+  {
+    "id": 7,
+    "question": "What is a common term for someone who sold too early?",
+    "options": ["Diamond hands", "Paper hands", "Iron fists", "Steel grip"],
+    "correctIndex": 1,
+    "category": "memes"
+  },
+  {
+    "id": 8,
+    "question": "What does 'aping in' mean in crypto?",
+    "options": [
+      "Carefully researching before buying",
+      "Buying impulsively without much research",
+      "Selling everything at once",
+      "Staking for yield"
+    ],
+    "correctIndex": 1,
+    "category": "memes"
+  },
+  {
+    "id": 9,
+    "question": "What is a wallet address used for on Solana?",
+    "options": [
+      "Mining Bitcoin",
+      "Receiving and sending tokens",
+      "Printing money",
+      "Running a validator only"
+    ],
+    "correctIndex": 1,
+    "category": "solana"
+  },
+  {
+    "id": 10,
+    "question": "What color is typically associated with a bull market?",
+    "options": ["Red", "Green", "Blue", "Purple"],
+    "correctIndex": 1,
+    "category": "basics"
+  },
+  {
+    "id": 11,
+    "question": "What does NGMI stand for?",
+    "options": [
+      "Never Gonna Moon It",
+      "Not Gonna Make It",
+      "New Gains Mean Income",
+      "No Green Market Incoming"
+    ],
+    "correctIndex": 1,
+    "category": "memes"
+  },
+  {
+    "id": 12,
+    "question": "What is a memecoin?",
+    "options": [
+      "A government-backed currency",
+      "A token often created as a joke or meme",
+      "A stablecoin pegged to USD",
+      "A hardware wallet"
+    ],
+    "correctIndex": 1,
+    "category": "basics"
+  },
+  {
+    "id": 13,
+    "question": "What does 'to the moon' mean?",
+    "options": [
+      "Price going down",
+      "Price going up dramatically",
+      "Moving to lunar colony",
+      "Transferring to Moonbeam chain"
+    ],
+    "correctIndex": 1,
+    "category": "memes"
+  },
+  {
+    "id": 14,
+    "question": "What is Phantom commonly used for?",
+    "options": [
+      "Solana wallet",
+      "Ethereum mining",
+      "NFT art creation only",
+      "Centralized exchange"
+    ],
+    "correctIndex": 0,
+    "category": "solana"
+  },
+  {
+    "id": 15,
+    "question": "What is 'exit liquidity'?",
+    "options": [
+      "Money you save for retirement",
+      "Buyers who let others sell at higher prices",
+      "A type of stablecoin",
+      "Validator rewards"
+    ],
+    "correctIndex": 1,
+    "category": "memes"
+  },
+  {
+    "id": 16,
+    "question": "How many lamports are in 1 SOL?",
+    "options": ["1,000,000", "100,000,000", "1,000,000,000", "10,000,000"],
+    "correctIndex": 2,
+    "category": "solana"
+  },
+  {
+    "id": 17,
+    "question": "What is a 'rug pull'?",
+    "options": [
+      "A legitimate airdrop",
+      "Developers abandoning a project and taking funds",
+      "A bullish chart pattern",
+      "Staking rewards"
+    ],
+    "correctIndex": 1,
+    "category": "basics"
+  },
+  {
+    "id": 18,
+    "question": "What does HODL originally mean?",
+    "options": [
+      "Hold On for Dear Life",
+      "A misspelling of 'hold'",
+      "Both of the above",
+      "High Output Daily Leverage"
+    ],
+    "correctIndex": 2,
+    "category": "memes"
+  },
+  {
+    "id": 19,
+    "question": "What is a DEX?",
+    "options": [
+      "Decentralized Exchange",
+      "Digital Exit eXpert",
+      "Degen Extra Xtreme",
+      "Delegated Execution"
+    ],
+    "correctIndex": 0,
+    "category": "basics"
+  },
+  {
+    "id": 20,
+    "question": "What does 'fud' stand for?",
+    "options": [
+      "Fear, Uncertainty, and Doubt",
+      "Fast Utility Deployment",
+      "Fully Unlocked Dividends",
+      "Fundamental Upward Drive"
+    ],
+    "correctIndex": 0,
+    "category": "memes"
+  },
+  {
+    "id": 21,
+    "question": "What is Jupiter on Solana?",
+    "options": [
+      "A DEX aggregator",
+      "A mining pool",
+      "A hardware wallet",
+      "A layer-2 bridge"
+    ],
+    "correctIndex": 0,
+    "category": "solana"
+  },
+  {
+    "id": 22,
+    "question": "What is an airdrop?",
+    "options": [
+      "Free tokens distributed to wallets",
+      "A type of rug pull",
+      "Selling at a loss",
+      "A chart indicator"
+    ],
+    "correctIndex": 0,
+    "category": "basics"
+  },
+  {
+    "id": 23,
+    "question": "What does 'rekt' mean?",
+    "options": [
+      "Massive profits",
+      "Suffered heavy losses",
+      "Reached new ATH",
+      "Received tokens"
+    ],
+    "correctIndex": 1,
+    "category": "memes"
+  },
+  {
+    "id": 24,
+    "question": "What is a seed phrase?",
+    "options": [
+      "A marketing slogan",
+      "Recovery words for your wallet",
+      "A type of memecoin",
+      "Validator password"
+    ],
+    "correctIndex": 1,
+    "category": "basics"
+  },
+  {
+    "id": 25,
+    "question": "What is 'degen' short for?",
+    "options": ["Degenerate", "Delegated generation", "Delta engine", "Digital genesis"],
+    "correctIndex": 0,
+    "category": "memes"
+  },
+  {
+    "id": 26,
+    "question": "What consensus mechanism does Solana use?",
+    "options": ["Proof of Work only", "Proof of Stake with Proof of History", "Proof of Authority", "Proof of Meme"],
+    "correctIndex": 1,
+    "category": "solana"
+  },
+  {
+    "id": 27,
+    "question": "What is a 'whale' in crypto?",
+    "options": [
+      "A small retail trader",
+      "Someone holding large amounts of crypto",
+      "A type of NFT",
+      "A scam bot"
+    ],
+    "correctIndex": 1,
+    "category": "memes"
+  },
+  {
+    "id": 28,
+    "question": "What does ATH stand for?",
+    "options": [
+      "All-Time High",
+      "Automated Token Handler",
+      "Alpha Trading Hub",
+      "Asset Transfer Hash"
+    ],
+    "correctIndex": 0,
+    "category": "basics"
+  },
+  {
+    "id": 29,
+    "question": "What is 'staking'?",
+    "options": [
+      "Selling tokens immediately",
+      "Locking tokens to support network and earn rewards",
+      "Creating a new memecoin",
+      "Shorting the market"
+    ],
+    "correctIndex": 1,
+    "category": "basics"
+  },
+  {
+    "id": 30,
+    "question": "What is a 'pump and dump'?",
+    "options": [
+      "Organic long-term growth",
+      "Artificially inflating price then selling",
+      "A staking strategy",
+      "A wallet feature"
+    ],
+    "correctIndex": 1,
+    "category": "basics"
+  },
+  {
+    "id": 31,
+    "question": "What is Raydium on Solana?",
+    "options": [
+      "An automated market maker / DEX",
+      "A hardware wallet",
+      "A meme generator",
+      "A Bitcoin bridge"
+    ],
+    "correctIndex": 0,
+    "category": "solana"
+  },
+  {
+    "id": 32,
+    "question": "What does 'LFG' mean?",
+    "options": [
+      "Let's F***ing Go",
+      "Low Fee Gains",
+      "Liquidity For Generations",
+      "Long-term Fund Growth"
+    ],
+    "correctIndex": 0,
+    "category": "memes"
+  },
+  {
+    "id": 33,
+    "question": "What is slippage?",
+    "options": [
+      "Difference between expected and actual trade price",
+      "A wallet error",
+      "A type of airdrop",
+      "Validator downtime"
+    ],
+    "correctIndex": 0,
+    "category": "basics"
+  },
+  {
+    "id": 34,
+    "question": "What is a 'bag holder'?",
+    "options": [
+      "Someone holding a losing position",
+      "A wallet manufacturer",
+      "A market maker",
+      "A validator operator"
+    ],
+    "correctIndex": 0,
+    "category": "memes"
+  },
+  {
+    "id": 35,
+    "question": "What is an NFT?",
+    "options": [
+      "Non-Fungible Token",
+      "New Financial Technology",
+      "Network Fee Transaction",
+      "Node Function Test"
+    ],
+    "correctIndex": 0,
+    "category": "basics"
+  },
+  {
+    "id": 36,
+    "question": "What does 'gm' mean in crypto Twitter?",
+    "options": ["Good morning", "Get money", "Go moon", "Gas max"],
+    "correctIndex": 0,
+    "category": "memes"
+  },
+  {
+    "id": 37,
+    "question": "What is a smart contract?",
+    "options": [
+      "Self-executing code on a blockchain",
+      "A legal document only",
+      "A hardware security module",
+      "A trading bot license"
+    ],
+    "correctIndex": 0,
+    "category": "basics"
+  },
+  {
+    "id": 38,
+    "question": "What is 'gas' on Ethereum (not Solana fees)?",
+    "options": [
+      "Transaction fee unit",
+      "A memecoin",
+      "Validator name",
+      "Mining reward"
+    ],
+    "correctIndex": 0,
+    "category": "basics"
+  },
+  {
+    "id": 39,
+    "question": "What is a cold wallet?",
+    "options": [
+      "Offline storage for crypto",
+      "A frozen exchange account",
+      "A bear market wallet",
+      "A free airdrop wallet"
+    ],
+    "correctIndex": 0,
+    "category": "basics"
+  },
+  {
+    "id": 40,
+    "question": "What does 'cope' mean in crypto culture?",
+    "options": [
+      "Denial after a bad trade",
+      "A trading strategy",
+      "Copy trading",
+      "Corporate operations"
+    ],
+    "correctIndex": 0,
+    "category": "memes"
+  },
+  {
+    "id": 41,
+    "question": "What is Solscan used for?",
+    "options": [
+      "Exploring Solana transactions and accounts",
+      "Mining SOL",
+      "Creating NFTs",
+      "Staking only"
+    ],
+    "correctIndex": 0,
+    "category": "solana"
+  },
+  {
+    "id": 42,
+    "question": "What is a 'bull run'?",
+    "options": [
+      "Extended period of rising prices",
+      "Market crash",
+      "Sideways trading",
+      "Regulatory ban"
+    ],
+    "correctIndex": 0,
+    "category": "basics"
+  },
+  {
+    "id": 43,
+    "question": "What is 'alpha' in trading communities?",
+    "options": [
+      "Valuable early information or edge",
+      "A type of stablecoin",
+      "A wallet brand",
+      "A chart color"
+    ],
+    "correctIndex": 0,
+    "category": "memes"
+  },
+  {
+    "id": 44,
+    "question": "What is a liquidity pool?",
+    "options": [
+      "Pool of tokens locked in a smart contract for trading",
+      "A group chat for traders",
+      "A mining farm",
+      "A cold storage vault"
+    ],
+    "correctIndex": 0,
+    "category": "basics"
+  },
+  {
+    "id": 45,
+    "question": "What does 'ser' mean in crypto Twitter?",
+    "options": ["Sir", "Server", "Serial trader", "Secure"],
+    "correctIndex": 0,
+    "category": "memes"
+  },
+  {
+    "id": 46,
+    "question": "What is the main purpose of a community token like $ANSEM?",
+    "options": [
+      "Community fun and culture",
+      "Guaranteed financial returns",
+      "Government bond replacement",
+      "Bank savings account"
+    ],
+    "correctIndex": 0,
+    "category": "ansem"
+  },
+  {
+    "id": 47,
+    "question": "What should you NEVER share publicly?",
+    "options": [
+      "Your wallet address",
+      "Your seed phrase / private key",
+      "Your quiz score",
+      "Your Twitter handle"
+    ],
+    "correctIndex": 1,
+    "category": "basics"
+  },
+  {
+    "id": 48,
+    "question": "What is 'buying the dip'?",
+    "options": [
+      "Purchasing when price drops",
+      "Selling at the top",
+      "Avoiding the market",
+      "Shorting an asset"
+    ],
+    "correctIndex": 0,
+    "category": "memes"
+  },
+  {
+    "id": 49,
+    "question": "What does NFA stand for?",
+    "options": [
+      "Not Financial Advice",
+      "New Fund Allocation",
+      "Network Fee Adjustment",
+      "Non-Fungible Asset"
+    ],
+    "correctIndex": 0,
+    "category": "memes"
+  },
+  {
+    "id": 50,
+    "question": "What is the Black Bull Trivia app for?",
+    "options": [
+      "Community trivia fun and weekly prizes",
+      "Guaranteed profit generation",
+      "Professional trading signals",
+      "Tax preparation services"
+    ],
+    "correctIndex": 0,
+    "category": "ansem"
+  }
+]
