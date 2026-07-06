@@ -63,13 +63,42 @@ function shuffleSeeded<T>(array: T[], seed: number): T[] {
   return arr;
 }
 
+/** Shuffle answer slots so correct answer isn't always A/B */
+function shuffleQuestionOptions(
+  question: Question,
+  seed?: number
+): Question {
+  const indices = question.options.map((_, i) => i);
+  const shuffledIndices =
+    seed !== undefined
+      ? shuffleSeeded(indices, seed)
+      : shuffleRandom(indices);
+
+  return {
+    ...question,
+    options: shuffledIndices.map((i) => question.options[i]),
+    correctIndex: shuffledIndices.indexOf(question.correctIndex),
+  };
+}
+
 function selectQuestions(roundType: RoundType): Question[] {
+  const weekId = getCurrentWeekId();
+  let selected: Question[];
+
   if (roundType === "free") {
-    const weekId = getCurrentWeekId();
     const seed = hashString(`black-bull-free-${weekId}`);
-    return shuffleSeeded(allQuestions, seed).slice(0, QUESTIONS_PER_ROUND);
+    selected = shuffleSeeded(allQuestions, seed).slice(0, QUESTIONS_PER_ROUND);
+  } else {
+    selected = shuffleRandom(allQuestions).slice(0, QUESTIONS_PER_ROUND);
   }
-  return shuffleRandom(allQuestions).slice(0, QUESTIONS_PER_ROUND);
+
+  return selected.map((q) => {
+    if (roundType === "free") {
+      const optionSeed = hashString(`black-bull-options-${weekId}-${q.id}`);
+      return shuffleQuestionOptions(q, optionSeed);
+    }
+    return shuffleQuestionOptions(q);
+  });
 }
 
 export function createQuizRound(roundType: RoundType): QuizState {
