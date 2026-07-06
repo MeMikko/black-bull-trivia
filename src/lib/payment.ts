@@ -6,52 +6,78 @@ import {
   LAMPORTS_PER_SOL,
 } from "@solana/web3.js";
 import { PRIZE_WALLET, ROUND_COST_LAMPORTS } from "./constants";
-import { getSolanaRpcEndpoint } from "./solana";
 
-const MAX_ATTEMPTS = 3;
+const CONFIRM_TIMEOUT_MS = 90_000;
+const POLL_INTERVAL_MS = 1_500;
 
-function isExpiredBlockhashError(err: unknown): boolean {
-  const msg = err instanceof Error ? err.message : String(err);
-  return (
-    msg.includes("block height exceeded") ||
-    msg.includes("has expired") ||
-    msg.includes("Blockhash not found")
-  );
-}
-
-async function waitForConfirmation(
-  connection: Connection,
-  signature: string,
-  blockhash: string,
-  lastValidBlockHeight: number
-): Promise<void> {
-  const confirmation = await connection.confirmTransaction(
-    { signature, blockhash, lastValidBlockHeight },
-    "confirmed"
-  );
-
-  if (confirmation.value.err) {
-    throw new Error(`Transaction failed: ${JSON.stringify(confirmation.value.err)}`);
-  }
-}
-
-async function isSignatureConfirmed(
+async function pollForConfirmation(
   connection: Connection,
   signature: string
-): Promise<boolean> {
-  const status = await connection.getSignatureStatus(signature);
-  if (!status.value) return false;
-  const conf = status.value.confirmationStatus;
-  return conf === "confirmed" || conf === "finalized";
+): Promise<void> {
+  const start = Date.now();
+
+  while (Date.now() - start < CONFIRM_TIMEOUT_MS) {
+    const { value } = await connection.getSignatureStatus(signature);
+
+    if (value?.err) {
+      throw new Error("Transaction failed on-chain.");
+    }
+
+    if (
+      value?.confirmationStatus === "confirmed" ||
+      value?.confirmationStatus === "finalized"
+    ) {
+      return;
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
+  }
+
+  const { value } = await connection.getSignatureStatus(signature);
+  if (
+    value?.confirmationStatus === "confirmed" ||
+    value?.confirmationStatus === "finalized"
+  ) {
+    return;
+  }
+
+  throw new Error(
+    "Transaction sent but confirmation timed out. Check your wallet — if SOL was deducted, your round may already be paid."
+  );
 }
 
-function createTransferTransaction(
+function normalizeWalletError(err: unknown): Error {
+  const message = err instanceof Error ? err.message : String(err);
+
+  if (
+    message.includes("User rejected") ||
+    message.includes("user rejected") ||
+    message.includes("cancelled")
+  ) {
+    return new Error("Transaction cancelled in wallet.");
+  }
+
+  return err instanceof Error ? err : new Error(message);
+}
+
+/**
+ * Send payment via wallet adapter — opens wallet ONCE.
+ * Uses wallet sendTransaction (sign + broadcast) then polls for confirmation.
+ */
+export async function sendRoundPayment(
   publicKey: PublicKey,
-  prizeWallet: PublicKey,
-  blockhash: string,
-  lastValidBlockHeight: number
-): Transaction {
-  return new Transaction({
+  sendTransaction: (
+    transaction: Transaction,
+    connection: Connection
+  ) => Promise<string>,
+  connection: Connection
+): Promise<string> {
+  const prizeWallet = new PublicKey(PRIZE_WALLET);
+
+  const { blockhash, lastValidBlockHeight } =
+    await connection.getLatestBlockhash("confirmed");
+
+  const transaction = new Transaction({
     feePayer: publicKey,
     blockhash,
     lastValidBlockHeight,
@@ -62,92 +88,26 @@ function createTransferTransaction(
       lamports: ROUND_COST_LAMPORTS,
     })
   );
-}
 
-export async function sendRoundPayment(
-  publicKey: PublicKey,
-  signTransaction: (tx: Transaction) => Promise<Transaction>
-): Promise<string> {
-  const connection = new Connection(getSolanaRpcEndpoint(), {
-    commitment: "confirmed",
-    confirmTransactionInitialTimeout: 60_000,
-  });
-  const prizeWallet = new PublicKey(PRIZE_WALLET);
+  let signature: string;
 
-  let lastError: Error | null = null;
-
-  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-    let blockhash: string;
-    let lastValidBlockHeight: number;
-
-    try {
-      const latest = await connection.getLatestBlockhash("finalized");
-      blockhash = latest.blockhash;
-      lastValidBlockHeight = latest.lastValidBlockHeight;
-    } catch {
-      throw new Error(
-        "Could not reach Solana RPC. Set NEXT_PUBLIC_SOLANA_RPC in your environment variables."
-      );
-    }
-
-    const transaction = createTransferTransaction(
-      publicKey,
-      prizeWallet,
-      blockhash,
-      lastValidBlockHeight
-    );
-
-    try {
-      const signed = await signTransaction(transaction);
-      const signature = await connection.sendRawTransaction(
-        signed.serialize(),
-        {
-          skipPreflight: false,
-          maxRetries: 3,
-          preflightCommitment: "confirmed",
-        }
-      );
-
-      try {
-        await waitForConfirmation(
-          connection,
-          signature,
-          blockhash,
-          lastValidBlockHeight
-        );
-        return signature;
-      } catch (confirmErr) {
-        if (await isSignatureConfirmed(connection, signature)) {
-          return signature;
-        }
-        if (isExpiredBlockhashError(confirmErr) && attempt < MAX_ATTEMPTS - 1) {
-          lastError =
-            confirmErr instanceof Error
-              ? confirmErr
-              : new Error(String(confirmErr));
-          continue;
-        }
-        throw confirmErr;
-      }
-    } catch (err) {
-      lastError = err instanceof Error ? err : new Error(String(err));
-
-      if (isExpiredBlockhashError(err) && attempt < MAX_ATTEMPTS - 1) {
-        continue;
-      }
-
-      if (lastError.message.includes("User rejected")) {
-        throw new Error("Transaction cancelled in wallet.");
-      }
-
-      throw lastError;
-    }
+  try {
+    signature = await sendTransaction(transaction, connection);
+  } catch (err) {
+    throw normalizeWalletError(err);
   }
 
-  throw (
-    lastError ??
-    new Error("Payment failed. Please try again — approve quickly in your wallet.")
-  );
+  try {
+    await pollForConfirmation(connection, signature);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (message.includes("timed out")) {
+      throw err;
+    }
+    throw normalizeWalletError(err);
+  }
+
+  return signature;
 }
 
 export function formatSolAmount(lamports: number): string {

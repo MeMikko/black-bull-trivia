@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useWallet } from "@solana/wallet-adapter-react";
+import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { Coins, Gift, Loader2, Play, Ticket } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -36,7 +36,8 @@ interface StartScreenProps {
 }
 
 export function StartScreen({ onStartQuiz }: StartScreenProps) {
-  const { publicKey, connected, signTransaction } = useWallet();
+  const { publicKey, connected, sendTransaction } = useWallet();
+  const { connection } = useConnection();
   const { toast } = useToast();
   const [freeAvailable, setFreeAvailable] = useState(false);
   const [paidCredits, setPaidCredits] = useState(0);
@@ -98,10 +99,10 @@ export function StartScreen({ onStartQuiz }: StartScreenProps) {
   };
 
   const handlePaidRound = async () => {
-    if (!publicKey || !signTransaction) {
+    if (!publicKey || !sendTransaction || !connection) {
       toast({
         title: "Wallet not ready",
-        description: "Please connect a wallet that supports signing.",
+        description: "Please connect a wallet that supports transactions.",
         variant: "destructive",
       });
       return;
@@ -109,7 +110,11 @@ export function StartScreen({ onStartQuiz }: StartScreenProps) {
 
     setIsPaying(true);
     try {
-      const signature = await sendRoundPayment(publicKey, signTransaction);
+      const signature = await sendRoundPayment(
+        publicKey,
+        sendTransaction,
+        connection
+      );
       addPaidRoundCredit(walletAddress, signature);
       if (!consumePaidRoundCredit(walletAddress)) {
         throw new Error("Failed to activate purchased round");
