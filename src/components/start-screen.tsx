@@ -50,7 +50,7 @@ function PaymentDetails({ walletName }: { walletName?: string }) {
       </p>
       <p className="mt-2 text-[11px]">
         {walletName === "Jupiter"
-          ? "Jupiter may warn on new sites — this is only a simple SOL transfer to the prize pool, not a token approval. Safe to confirm if you trust Black Bull Trivia."
+          ? "Jupiter scans new sites with HyperNative. If you see a red warning, choose \"I know what I'm doing\" — this app only requests a simple SOL transfer, not token approvals."
           : "Your wallet may warn on new sites — this is a simple SOL transfer, not a token approval. Safe to confirm if you trust this app."}
       </p>
     </div>

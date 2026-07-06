@@ -122,6 +122,17 @@ export function TriviaApp() {
         <p className="text-xs text-muted-foreground/60">
           Built for the $ANSEM community 🐂
         </p>
+        <p className="mt-2 text-[11px] text-muted-foreground/50">
+          Open source:{" "}
+          <a
+            href="https://github.com/MeMikko/black-bull-trivia"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline underline-offset-2 hover:text-muted-foreground"
+          >
+            github.com/MeMikko/black-bull-trivia
+          </a>
+        </p>
       </footer>
     </div>
   );
